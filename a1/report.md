@@ -149,6 +149,34 @@ google.com name server ns2.google.com.
 
 -------
 
+## Question 2: Packet Analysis
+
+The following parts would contain some screenshots from Wireshark. Please note that the colours might be different than expected due to it picking up colours from my GTK color scheme. The time field has units of seconds with the precision of milliseconds.
+
+(a) ![DNS request response time\label{dns-req-res-apache}](./media/dns-req-res-apache.png)
+
+    As we can see in \autoref{dns-req-res-apache}, 4 DNS requests were sent for `http://apache.org`, 2 of those query the A record and 2 of those query the AAAA record. The time difference between the first DNS request and the last DNS response is 11ms. The individual requests got responses in 3ms, 7ms, 5ms and 11ms.
+
+(b) ![HTTP requests sent\label{http-reqs-apache}](./media/http-reqs-apache.png)
+
+    To find out how many HTTP requests were sent, I applied the filter `http and ip.src==192.168.0.109` where `192.168.0.109` is my machine's IP. Some of the resulting rows can be seen in \autoref{http-reqs-apache}. This results in 27 rows and thus approximately these many HTTP requests were made for displaying the website.
+
+    Now I removed the `ip.src` part of the filter to also view the responses. I observed that first request `GET /` received a response of with file type `text/html`. After this, many `GET` requests were sent to fetch different files in paths `/css/`, `/js/`, `/img/` and `/logos/`. This tells us that the browser first gets the HTML and parses it to find the other things it needs to load. Then it sends requests for all these objects and renders them as the responses come in.
+
+(c) The first DNS request has the time field as 6.469s and the last HTTP response object (which was a favicon, a PNG image) has the time field as 7.940s. Thus it took 1.471s to load the entire page.
+
+(d) ![HTTP packets for cse.iitd.ac.in\label{http-req-res-cse}](./media/http-req-res-cse.png)
+
+    On applying the `http` filter to a packet trace for `http://www.cse.iitd.ac.in`, we only see 2 packets as can be seen in \autoref{http-req-res-cse}.
+
+    We observe that the HTTP response we got was `301 Moved Permanently`. 
+    
+    ![Details of the 301 HTTP response\label{http-301-cse}](./media/http-301-cse.png)
+
+    Upon further inspection, as seen in \autoref{http-301-cse}, we observe that the browser was redirected to the HTTPS site, `https://www.cse.iitd.ac.in`. Upon removing the `http` filter, I observed that a `Client Hello` was initiated using the `TLSv1.2` protocol. This is the result of the new redirected webpage using HTTPS, and all the further communication happens through this protocol only. This explains why we don't see any more HTTP traffic, since it is being exchanged encrypted through the TLSv1.2 protocol.
+
+    The reason we didn't have this "problem" when visiting http://apache.com is because it doesn't send any redirect response and thus we could transparently see the HTTP packets being exchanged.
+
 ## Appendix
 
 ### Question 1(d) full traceroute runs
