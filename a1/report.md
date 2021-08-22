@@ -138,7 +138,7 @@ google.com name server ns2.google.com.
     Property                            | Excitel | Airtel | Jio
     ------------------------------------|---------|--------|----
     Total number of hops                | 12      | 15     | 23
-    # Hops with timeouts                | 4       | 3      | 7
+    # Hops with timeouts                | 4       | 3      | 8
     # Hops with 192.168.\*.\* addresses | 1       | 4      | 5
     # Hops with 10.\*.\*.\* addresses   | 0       | 2      | 0
     Any IPv6 addresses?                 | No      | No     | No
