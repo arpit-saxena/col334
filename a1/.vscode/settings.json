@@ -2,7 +2,7 @@
     "emeraldwalk.runonsave": {
         "commands": [
         {
-            "match": ".*.md",
+            "match": "report.md",
             "isAsync": true,
             "cmd": "pandoc ${fileBasename} -o ${fileBasenameNoExt}.pdf"
         },
