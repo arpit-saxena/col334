@@ -177,6 +177,18 @@ The following parts would contain some screenshots from Wireshark. Please note t
 
     The reason we didn't have this "problem" when visiting http://apache.com is because it doesn't send any redirect response and thus we could transparently see the HTTP packets being exchanged.
 
+-------
+
+## Question 3: Implement Traceroute using Ping
+
+![Sample traceroute output\label{traceroute-print}](./media/traceroute-print.png)
+
+![RTT vs Hop for traceroute to www.iitd.ac.in\label{traceroute-plot}](./media/traceroute-plot.png){width=70%}
+
+The output showing IP addresses of all the hops is in \autoref{traceroute-print} and the RTT vs Hop plot for `www.iitd.ac.in` is in \autoref{traceroute-plot}
+
+-------
+
 ## Appendix
 
 ### Question 1(d) full traceroute runs
@@ -251,4 +263,3 @@ The following parts would contain some screenshots from Wireshark. Please note t
     23  103.27.9.24 (103.27.9.24)  80.631 ms  80.620 ms  49.563 ms
 
     ```
-
