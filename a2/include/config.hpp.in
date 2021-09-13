@@ -1,3 +1,5 @@
 // clang-format off
 #define ChatApp_VERSION_MAJOR @ChatApp_VERSION_MAJOR@
 #define ChatApp_VERSION_MINOR @ChatApp_VERSION_MINOR@
+
+#define SERVER_PORT 14420
