@@ -13,6 +13,7 @@
 #include "config.hpp"
 
 class ClientSocket {
+ protected:
   int socketDesc;
 
   ClientSocket() {
@@ -24,6 +25,8 @@ class ClientSocket {
   }
 
  public:
+  ClientSocket(int desc) : socketDesc(desc){};
+
   ClientSocket(const std::string serverAddr) : ClientSocket() {
     sockaddr_in server;
     server.sin_addr.s_addr = inet_addr(serverAddr.c_str());
