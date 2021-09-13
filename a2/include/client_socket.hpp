@@ -1,5 +1,5 @@
-#ifndef SOCKET_HPP
-#define SOCKET_HPP
+#ifndef CLIENT_SOCKET_HPP
+#define CLIENT_SOCKET_HPP
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -12,10 +12,10 @@
 
 #include "config.hpp"
 
-class Socket {
+class ClientSocket {
   int socketDesc;
 
-  Socket() {
+  ClientSocket() {
     socketDesc = socket(AF_INET, SOCK_STREAM, 0);
     if (socketDesc == -1) {
       throw std::runtime_error("Socket construction: " +
@@ -24,7 +24,7 @@ class Socket {
   }
 
  public:
-  Socket(const std::string serverAddr) : Socket() {
+  ClientSocket(const std::string serverAddr) : ClientSocket() {
     sockaddr_in server;
     server.sin_addr.s_addr = inet_addr(serverAddr.c_str());
     server.sin_family = AF_INET;
@@ -36,13 +36,13 @@ class Socket {
     }
   }
 
-  ~Socket() { close(socketDesc); }
-  Socket(const Socket &) = delete;
-  Socket(Socket &&other) noexcept : socketDesc(other.socketDesc) {
+  ~ClientSocket() { close(socketDesc); }
+  ClientSocket(const ClientSocket &) = delete;
+  ClientSocket(ClientSocket &&other) noexcept : socketDesc(other.socketDesc) {
     other.socketDesc = -1;
   }
-  Socket &operator=(const Socket &) = delete;
-  Socket &operator=(Socket &&other) noexcept {
+  ClientSocket &operator=(const ClientSocket &) = delete;
+  ClientSocket &operator=(ClientSocket &&other) noexcept {
     close(socketDesc);
     socketDesc = other.socketDesc;
     other.socketDesc = -1;
@@ -69,4 +69,4 @@ class Socket {
   }
 };
 
-#endif /* SOCKET_HPP */
+#endif /* CLIENT_SOCKET_HPP */
