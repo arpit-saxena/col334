@@ -13,8 +13,12 @@
 #include "config.hpp"
 
 class ClientSocket {
+ public:
+  enum Status { CLOSED, OPEN };
+
  protected:
   int socketDesc;
+  Status status;
 
   ClientSocket() {
     socketDesc = socket(AF_INET, SOCK_STREAM, 0);
@@ -22,10 +26,11 @@ class ClientSocket {
       throw std::runtime_error("Socket construction: " +
                                std::string(strerror(errno)));
     }
+    status = OPEN;
   }
 
  public:
-  ClientSocket(int desc) : socketDesc(desc){};
+  ClientSocket(int desc) : socketDesc(desc), status(OPEN){};
 
   ClientSocket(const std::string serverAddr) : ClientSocket() {
     sockaddr_in server;
@@ -39,21 +44,39 @@ class ClientSocket {
     }
   }
 
-  ~ClientSocket() { close(socketDesc); }
+  ~ClientSocket() {
+    // https://stackoverflow.com/a/8873013/5585431
+    shutdown(socketDesc, SHUT_RDWR);
+    char buffer[100];
+    while (read(socketDesc, buffer, 100) > 0) {
+    }
+    close(socketDesc);
+  }
+
   ClientSocket(const ClientSocket &) = delete;
-  ClientSocket(ClientSocket &&other) noexcept : socketDesc(other.socketDesc) {
+  ClientSocket(ClientSocket &&other) noexcept
+      : socketDesc(other.socketDesc), status(other.status) {
     other.socketDesc = -1;
+    other.status = CLOSED;
   }
   ClientSocket &operator=(const ClientSocket &) = delete;
   ClientSocket &operator=(ClientSocket &&other) noexcept {
     close(socketDesc);
     socketDesc = other.socketDesc;
+    status = other.status;
     other.socketDesc = -1;
+    other.status = CLOSED;
     return *this;
   }
 
+  Status operator()() const { return status; }
+
   void sendData(const std::string data) {
-    if (send(socketDesc, data.c_str(), data.length(), 0) == -1) {
+    if (send(socketDesc, data.c_str(), data.length(), MSG_NOSIGNAL) == -1) {
+      if (errno == EPIPE) {
+        status = CLOSED;
+        return;
+      }
       throw std::runtime_error("Socket data send: " +
                                std::string(strerror(errno)));
     }
@@ -66,7 +89,7 @@ class ClientSocket {
       throw std::runtime_error("Socket data receive: " +
                                std::string(strerror(errno)));
     }
-    std::cout << length << '\n';
+    if (length == 0) status = CLOSED;
     std::string ret(buffer, length);
     return ret;
   }
