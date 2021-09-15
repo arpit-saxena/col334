@@ -71,28 +71,9 @@ class ClientSocket {
 
   Status operator()() const { return status; }
 
-  void sendData(const std::string data) {
-    if (send(socketDesc, data.c_str(), data.length(), MSG_NOSIGNAL) == -1) {
-      if (errno == EPIPE) {
-        status = CLOSED;
-        return;
-      }
-      throw std::runtime_error("Socket data send: " +
-                               std::string(strerror(errno)));
-    }
-  }
-
-  std::string recvData(const int maxLen) {
-    char buffer[maxLen];
-    int length = recv(socketDesc, buffer, maxLen, 0);
-    if (length < 0) {
-      throw std::runtime_error("Socket data receive: " +
-                               std::string(strerror(errno)));
-    }
-    if (length == 0) status = CLOSED;
-    std::string ret(buffer, length);
-    return ret;
-  }
+  void sendData(const std::string data);
+  std::string recvSome(const int maxLen);
+  std::string recv(const int len);
 };
 
 #endif /* CLIENT_SOCKET_HPP */

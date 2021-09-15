@@ -1,6 +1,6 @@
 include_directories(${PROJECT_SOURCE_DIR}/include)
-add_executable(client client.cpp)
-add_executable(server server.cpp)
+add_executable(client client.cpp client_socket.cpp)
+add_executable(server server.cpp client_socket.cpp)
 
 set_target_properties(client server
     PROPERTIES
