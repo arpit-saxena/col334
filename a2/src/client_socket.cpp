@@ -71,3 +71,21 @@ std::string ClientSocket::recvUntil(std::string matchStr) {
     }
   }
 }
+
+// Reads string str from the socket and discards it. If the string does
+// not match returns false, stream is left unchanged
+bool ClientSocket::expect(std::string str) {
+  std::string ret;
+  int readLen = str.length();
+  while (true) {
+    std::string now = recvSome(readLen);
+    readLen -= now.size();
+    ret += now;
+    if (ret != str.substr(0, ret.size())) {
+      buffer = ret + buffer;
+      return false;
+    } else if (ret == str) {
+      return true;
+    }
+  };
+}

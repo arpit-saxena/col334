@@ -78,6 +78,7 @@ class ClientSocket {
   std::string recvSome(const int maxLen);
   std::string recv(const int len);
   std::string recvUntil(std::string matchStr);
+  bool expect(std::string str);
 };
 
 #endif /* CLIENT_SOCKET_HPP */
