@@ -1,5 +1,7 @@
 #include "client_socket.hpp"
 
+#include <stdexcept>
+
 void ClientSocket::sendData(const std::string data) {
   if (send(socketDesc, data.c_str(), data.length(), MSG_NOSIGNAL) == -1) {
     if (errno == EPIPE) {
@@ -36,4 +38,36 @@ std::string ClientSocket::recv(const int len) {
     ret += recvSome(len - ret.length());
   }
   return ret;
+}
+
+// Read until first instance of matchStr and discard matchStr
+std::string ClientSocket::recvUntil(std::string matchStr) {
+  if (matchStr.size() == 0)
+    throw std::invalid_argument("Can't read until empty string");
+
+  std::string currReadStr;
+  int idx = 0;
+
+  while (true) {
+    std::string message;
+    if (buffer.size() > 0) {
+      message = buffer;
+      buffer = "";
+    } else {
+      message = recvSome(std::max((int)matchStr.length(), READ_SIZE));
+    }
+
+    if (message.length() == 0) {
+      return currReadStr;
+    }
+    currReadStr += message;
+
+    for (; idx + matchStr.length() <= currReadStr.length(); idx++) {
+      if (currReadStr.substr(idx, matchStr.length()) == matchStr) {
+        std::string ret = currReadStr.substr(0, idx);
+        buffer = currReadStr.substr(idx + matchStr.length());
+        return ret;
+      }
+    }
+  }
 }

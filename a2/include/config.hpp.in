@@ -3,3 +3,4 @@
 #define ChatApp_VERSION_MINOR @ChatApp_VERSION_MINOR@
 
 #define SERVER_PORT 14420
+#define READ_SIZE 30 // How many max characters to read at once
