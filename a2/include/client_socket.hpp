@@ -16,6 +16,9 @@ class ClientSocket {
  public:
   enum Status { CLOSED, OPEN };
 
+ private:
+  std::string buffer;
+
  protected:
   int socketDesc;
   Status status;

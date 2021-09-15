@@ -12,6 +12,13 @@ void ClientSocket::sendData(const std::string data) {
 }
 
 std::string ClientSocket::recvSome(const int maxLen) {
+  if (buffer.size() != 0) {
+    int retLen = std::min((int)buffer.length(), maxLen);
+    std::string ret = buffer.substr(0, retLen);
+    buffer = buffer.substr(retLen);
+    return ret;
+  }
+
   char charBuf[maxLen];
   int length = ::recv(socketDesc, charBuf, maxLen, 0);
   if (length < 0) {
