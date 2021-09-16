@@ -29,6 +29,39 @@ std::string ControlMessage::str() const {
   return ss.str();
 }
 
+ControlMessage ControlMessage::readFrom(ClientSocket &socket, Type type) {
+  bool res = socket.expect(getTypeStr(type) + ' ');
+  if (!res) {
+    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+
+  std::string additional;
+  switch (type) {
+    case REGISTER:
+    case REGISTERED:
+      const std::string toSend{"TOSEND"};
+      bool gotToSend = socket.expect(toSend + ' ');
+      if (gotToSend) {
+        additional = toSend;
+        break;
+      }
+      const std::string toReceive{"TORECV"};
+      bool gotToRecv = socket.expect(toReceive + ' ');
+      if (gotToRecv) {
+        additional = toReceive;
+        break;
+      }
+      throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+
+  const std::string username = socket.recvUntil("\n\n");
+  for (auto c : username) {
+    if (!isalnum(c)) throw ErrorMessage(ErrorMessage::MALFORMED_USERNAME);
+  }
+
+  return ControlMessage{type, username, additional};
+}
+
 std::string ContentMessage::str() const {
   std::ostringstream ss;
   ss << getTypeStr() << ' ' << getUsername() << '\n';

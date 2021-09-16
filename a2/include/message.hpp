@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "client_socket.hpp"
+
 class Message {
  public:
   enum Type { REGISTER, REGISTERED, ERROR, SEND, SENT, FORWARD, RECEIVED };
@@ -29,7 +31,9 @@ class ControlMessage : public Message {
       : Message(_type), username(_username), additional(_additional){};
 
   std::string getUsername() const { return username; };
+  std::string getAdditional() const { return additional; };
   std::string str() const;
+  static ControlMessage readFrom(ClientSocket &socket, Type type);
 };
 
 class ContentMessage : public Message {

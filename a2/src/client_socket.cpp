@@ -1,5 +1,6 @@
 #include "client_socket.hpp"
 
+#include <cctype>
 #include <stdexcept>
 
 void ClientSocket::sendData(const std::string data) {
