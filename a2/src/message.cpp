@@ -11,6 +11,8 @@ std::string Message::getTypeStr(Type type) {
       return "REGISTERED";
     case ERROR:
       return "ERROR";
+    case SEND:
+      return "SEND";
     case SENT:
       return "SENT";
     case FORWARD:
