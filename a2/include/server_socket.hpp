@@ -12,6 +12,11 @@
 class ServerSocket : protected ClientSocket {
  public:
   ServerSocket(int port, int backlog) : ClientSocket() {
+    // Allow reuse of socket address after it's closed
+    // See https://stackoverflow.com/a/10651048/5585431
+    int trueFlag = 1;
+    setsockopt(socketDesc, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int));
+
     sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
