@@ -34,7 +34,7 @@ std::string ControlMessage::str() const {
 ControlMessage ControlMessage::readFrom(ClientSocket &socket, Type type) {
   bool res = socket.expect(getTypeStr(type) + ' ');
   if (!res) {
-    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+    throw MessageTypeMismatch{};
   }
 
   std::string additional;
@@ -72,16 +72,31 @@ std::string ContentMessage::str() const {
   return ss.str();
 }
 
+ContentMessage ContentMessage::readFrom(ClientSocket &socket, Type type) {
+  auto typeStr = Message::getTypeStr(type);
+  auto found = socket.expect(typeStr + ' ');
+  if (!found) throw MessageTypeMismatch{};
+  auto username = socket.recvUntil("\n");
+  found = socket.expect("Content-length: ");
+  if (!found) throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  auto lenStr = socket.recvUntil("\n\n");
+  int len;
+  try {
+    len = std::stoi(lenStr);
+  } catch (...) {
+    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+  auto content = socket.recv(len);
+  return ContentMessage{type, username, content};
+}
+
 int ErrorMessage::getErrorNum() const noexcept {
   switch (errorType) {
     case MALFORMED_USERNAME:
-      return 100;
     case NO_USER_REG:
-      return 101;
     case UNABLE_SEND:
-      return 102;
     case HEADER_INCOMPLETE:
-      return 103;
+      return errorType;
   }
   return -1;
 }
@@ -104,4 +119,25 @@ std::string ErrorMessage::str() const noexcept {
   std::ostringstream ss;
   ss << "ERROR " << getErrorNum() << ' ' << getErrorStr() << "\n\n";
   return ss.str();
+}
+
+ErrorMessage ErrorMessage::readFrom(ClientSocket &socket) {
+  auto found = socket.expect("ERROR ");
+  if (!found) throw MessageTypeMismatch{};
+  auto errorNumStr = socket.recvUntil(" ");
+  int errorNum;
+  try {
+    errorNum = std::stoi(errorNumStr);
+  } catch (...) {
+    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+  ErrorMessage err{(ErrorMessage::ErrorType)errorNum};
+  if (err.getErrorNum() == -1) {
+    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+  auto errStr = socket.recvUntil("\n\n");
+  if (errStr != err.getErrorStr()) {
+    throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  }
+  return err;
 }
