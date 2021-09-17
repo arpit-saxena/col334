@@ -71,11 +71,10 @@ void listenSend(ClientSocket socket, std::string username) {
 std::pair<std::string, std::string> getUsernameServer() {
   std::cout << "Enter Username: ";
   std::string username;
-  std::cin >> username;
+  std::getline(std::cin, username);
   std::string serverIP;
   std::cout << "Enter chat server address: ";
-  std::cin >> serverIP;
-  std::cin.ignore(1000, '\n');
+  std::getline(std::cin, serverIP);
   return {username, serverIP};
 }
 
