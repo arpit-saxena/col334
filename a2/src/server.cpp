@@ -37,6 +37,12 @@ class UserMap {
     return it->second;
   }
 
+  void forEach(std::function<void(std::string, ClientSocket &)> func) {
+    for (auto &[username, socket] : clientMap) {
+      func(username, socket);
+    }
+  }
+
   bool userExists(std::string username) {
     return clientMap.find(username) != clientMap.end();
   }
@@ -60,6 +66,23 @@ void forwardMessage(ClientSocket &receiverSocket, ContentMessage message) {
   }
 }
 
+void forwardAll(ContentMessage message, std::string fromUser) {
+  auto lock = userMap.lockUnique();
+  userMap.forEach(
+      [fromUser, message](std::string toUser, ClientSocket &receiverSocket) {
+        if (fromUser == toUser) return;
+        try {
+          forwardMessage(receiverSocket, message);
+        } catch (const ErrorMessage &e) {
+          receiverSocket.sendData(e.str());
+          if (e.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) {
+            receiverSocket.close();
+          }
+          throw ErrorMessage{ErrorMessage::UNABLE_SEND};
+        }
+      });
+}
+
 void receiveMessages(ClientSocket socket, std::string username) {
   while (true) {
     try {
@@ -71,8 +94,18 @@ void receiveMessages(ClientSocket socket, std::string username) {
         }
       }
       try {
+        if (message.getUsername() == "ALL") {
+          auto forward =
+              ContentMessage{Message::FORWARD, username, message.getContent()};
+          forwardAll(forward, username);
+          socket.sendData(
+              ControlMessage{Message::SENT, message.getUsername()}.str());
+          return;
+        }
+
         auto lock = userMap.lockShared();
         auto &receiverSocket = userMap.findUser(message.getUsername());
+        lock.unlock();
         try {
           auto forward =
               ContentMessage{Message::FORWARD, username, message.getContent()};
@@ -106,13 +139,6 @@ void listenRegister(ClientSocket &&socket) {
   try {
     auto message = ControlMessage::readFrom(socket, Message::REGISTER);
     username = message.getUsername();
-
-    {
-      auto lock = userMap.lockUnique();
-      if (userMap.userExists(username)) {
-        throw ErrorMessage{ErrorMessage::MALFORMED_USERNAME}.str();
-      }
-    }
 
     if (message.getAdditional() == "TORECV") {
       auto lock = userMap.lockUnique();
