@@ -34,79 +34,57 @@ void ClientSocket::sendData(const std::string data) {
   }
 }
 
-std::string ClientSocket::recvSome(const int maxLen) {
+void ClientSocket::recvSome(const int maxLen) {
   if (buffer.size() != 0) {
-    int retLen = std::min((int)buffer.length(), maxLen);
-    std::string ret = buffer.substr(0, retLen);
-    buffer = buffer.substr(retLen);
-    return ret;
+    std::clog << "recvSome called with non-empty buffer! Emptying buffer\n";
+    buffer.clear();
   }
 
   char charBuf[maxLen];
-  int length = ::recv(socketDesc, charBuf, maxLen, 0);
+  auto length = ::recv(socketDesc, charBuf, maxLen, 0);
   if (length < 0) {
     throw std::runtime_error("Socket data receive: " +
                              std::string(strerror(errno)));
   }
   if (length == 0) status = CLOSED;
-  std::string ret(charBuf, length);
-  return ret;
+  buffer = std::string{charBuf, (size_t)length};
 }
 
-std::string ClientSocket::recv(const int len) {
-  std::string ret{};
-  while (ret.length() < len) {
-    ret += recvSome(len - ret.length());
-  }
-  return ret;
-}
-
-// Read until first instance of matchStr and discard matchStr
-std::string ClientSocket::recvUntil(std::string matchStr) {
+// Read from buffer until first instance of matchStr or end of buffer
+// If some part was matched returns true, otherwise returns false
+// The returned data is removed from the buffer.
+std::pair<std::string, bool> ClientSocket::recvUntil(
+    const std::string matchStr) {
   if (matchStr.size() == 0)
     throw std::invalid_argument("Can't read until empty string");
 
-  std::string currReadStr;
-  int idx = 0;
-
-  while (true) {
-    std::string message;
-    if (buffer.size() > 0) {
-      message = buffer;
-      buffer = "";
-    } else {
-      message = recvSome(std::max((int)matchStr.length(), READ_SIZE));
-    }
-
-    if (message.length() == 0) {
-      return currReadStr;
-    }
-    currReadStr += message;
-
-    for (; idx + matchStr.length() <= currReadStr.length(); idx++) {
-      if (currReadStr.substr(idx, matchStr.length()) == matchStr) {
-        std::string ret = currReadStr.substr(0, idx);
-        buffer = currReadStr.substr(idx + matchStr.length());
-        return ret;
-      }
+  for (int idx = 0; idx + matchStr.length() <= buffer.length(); idx++) {
+    if (buffer.substr(idx, matchStr.length()) == matchStr) {
+      std::string ret = buffer.substr(0, idx);
+      buffer = buffer.substr(idx + matchStr.length());
+      return {ret, true};
     }
   }
+
+  auto ret = buffer;
+  buffer.clear();
+  return {ret, false};
 }
 
-// Reads string str from the socket and discards it. If the string does
-// not match returns false, stream is left unchanged
-bool ClientSocket::expect(std::string str) {
-  std::string ret;
-  int readLen = str.length();
-  while (true) {
-    std::string now = recvSome(readLen);
-    readLen -= now.size();
-    ret += now;
-    if (ret != str.substr(0, ret.size())) {
-      buffer = ret + buffer;
-      return false;
-    } else if (ret == str) {
-      return true;
-    }
-  };
+// Reads string str from the buffer and discards it. If the string does
+// not match returns false, buffer is left unchanged
+bool ClientSocket::expect(const std::string str) {
+  if (buffer.size() < str.size()) return false;
+  if (buffer.substr(0, str.size()) == str) {
+    buffer = buffer.substr(str.size());
+    return true;
+  }
+  return false;
+}
+
+// Empties the buffer and returns the contents of it;
+std::string ClientSocket::recvAll() {
+  std::string ret = buffer;
+  buffer.clear();
+  return ret;
 }

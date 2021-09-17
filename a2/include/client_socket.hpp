@@ -82,10 +82,10 @@ class ClientSocket {
   Status operator()() const { return status; }
 
   void sendData(const std::string data);
-  std::string recvSome(const int maxLen);
-  std::string recv(const int len);
-  std::string recvUntil(std::string matchStr);
-  bool expect(std::string str);
+  void recvSome(const int maxLen);
+  std::pair<std::string, bool> recvUntil(const std::string matchStr);
+  std::string recvAll();
+  bool expect(const std::string str);
 };
 
 #endif /* CLIENT_SOCKET_HPP */

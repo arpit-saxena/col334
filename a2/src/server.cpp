@@ -56,6 +56,7 @@ class UserMap {
 void forwardMessage(ClientSocket &receiverSocket, ContentMessage message) {
   receiverSocket.sendData(message.str());
   try {
+    receiverSocket.recvSome(READ_SIZE);
     auto reply = ControlMessage::readFrom(receiverSocket, Message::RECEIVED);
     if (reply.getUsername() != message.getUsername()) {
       throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
@@ -86,6 +87,7 @@ void forwardAll(ContentMessage message, std::string fromUser) {
 void receiveMessages(ClientSocket socket, std::string username) {
   while (true) {
     try {
+      socket.recvSome(READ_SIZE);
       auto message = ContentMessage::readFrom(socket, Message::SEND);
       {
         auto lock = userMap.lockShared();
@@ -137,6 +139,7 @@ void receiveMessages(ClientSocket socket, std::string username) {
 void listenRegister(ClientSocket &&socket) {
   std::string username;
   try {
+    socket.recvSome(READ_SIZE);
     auto message = ControlMessage::readFrom(socket, Message::REGISTER);
     username = message.getUsername();
 

@@ -56,7 +56,8 @@ ControlMessage ControlMessage::readFrom(ClientSocket &socket, Type type) {
       throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
   }
 
-  const std::string username = socket.recvUntil("\n\n");
+  const auto [username, found] = socket.recvUntil("\n\n");
+  if (!found) throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
   for (auto c : username) {
     if (!isalnum(c)) throw ErrorMessage(ErrorMessage::MALFORMED_USERNAME);
   }
@@ -76,17 +77,24 @@ ContentMessage ContentMessage::readFrom(ClientSocket &socket, Type type) {
   auto typeStr = Message::getTypeStr(type);
   auto found = socket.expect(typeStr + ' ');
   if (!found) throw MessageTypeMismatch{};
-  auto username = socket.recvUntil("\n");
-  found = socket.expect("Content-length: ");
-  if (!found) throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
-  auto lenStr = socket.recvUntil("\n\n");
+  auto [username, foundUsername] = socket.recvUntil("\n");
+  if (!foundUsername) throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
+  auto foundContentLengthDecl = socket.expect("Content-length: ");
+  if (!foundContentLengthDecl) {
+    throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
+  }
+  auto [lenStr, foundEnd] = socket.recvUntil("\n\n");
+  if (!foundEnd) throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
   int len;
   try {
     len = std::stoi(lenStr);
   } catch (...) {
     throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
   }
-  auto content = socket.recv(len);
+  auto content = socket.recvAll();
+  if (content.length() != len) {
+    throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
+  }
   return ContentMessage{type, username, content};
 }
 
@@ -124,7 +132,8 @@ std::string ErrorMessage::str() const noexcept {
 ErrorMessage ErrorMessage::readFrom(ClientSocket &socket) {
   auto found = socket.expect("ERROR ");
   if (!found) throw MessageTypeMismatch{};
-  auto errorNumStr = socket.recvUntil(" ");
+  auto [errorNumStr, errorNumFound] = socket.recvUntil(" ");
+  if (!errorNumFound) throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
   int errorNum;
   try {
     errorNum = std::stoi(errorNumStr);
@@ -135,7 +144,8 @@ ErrorMessage ErrorMessage::readFrom(ClientSocket &socket) {
   if (err.getErrorNum() == -1) {
     throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
   }
-  auto errStr = socket.recvUntil("\n\n");
+  auto [errStr, errStrFound] = socket.recvUntil("\n\n");
+  if (!errStrFound) throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
   if (errStr != err.getErrorStr()) {
     throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
   }

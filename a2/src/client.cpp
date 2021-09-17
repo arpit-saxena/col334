@@ -11,6 +11,7 @@
 void listenRecv(ClientSocket socket) {
   while (true) {
     try {
+      socket.recvSome(READ_SIZE);
       auto forward = ContentMessage::readFrom(socket, Message::FORWARD);
       std::cout << forward.getUsername() << ": " << forward.getContent()
                 << std::endl;
@@ -40,6 +41,7 @@ void listenSend(ClientSocket socket, std::string username) {
 
     socket.sendData(ContentMessage{Message::SEND, toUser, content}.str());
     try {
+      socket.recvSome(READ_SIZE);
       try {
         auto res = ControlMessage::readFrom(socket, Message::SENT);
       } catch (const MessageTypeMismatch &m) {
@@ -72,6 +74,7 @@ int main(int argc, char *argv[]) {
       sendSocket.sendData(
           ControlMessage{Message::REGISTER, username, "TOSEND"}.str());
 
+      sendSocket.recvSome(READ_SIZE);
       try {
         ControlMessage::readFrom(sendSocket, Message::REGISTERED);
       } catch (const MessageTypeMismatch &m) {
@@ -81,6 +84,8 @@ int main(int argc, char *argv[]) {
 
       recvSocket.sendData(
           ControlMessage{Message::REGISTER, username, "TORECV"}.str());
+
+      recvSocket.recvSome(READ_SIZE);
       try {
         ControlMessage::readFrom(recvSocket, Message::REGISTERED);
       } catch (const MessageTypeMismatch &m) {
