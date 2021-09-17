@@ -81,5 +81,13 @@
         "variant": "cpp",
         "*.ipp": "cpp",
         "*.rh": "cpp"
+    },
+    "emeraldwalk.runonsave": {
+        "commands": [
+        {
+            "match": "report.md",
+            "isAsync": true,
+            "cmd": "pandoc doc/report.md -o doc/report.pdf"
+        }]
     }
 }
