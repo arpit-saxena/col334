@@ -100,7 +100,7 @@ void receiveMessages(ClientSocket socket, std::string username) {
           forwardAll(forward, username);
           socket.sendData(
               ControlMessage{Message::SENT, message.getUsername()}.str());
-          return;
+          continue;
         }
 
         auto lock = userMap.lockShared();
