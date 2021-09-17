@@ -1,10 +1,105 @@
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <utility>
 
+#include "client_socket.hpp"
 #include "config.hpp"
+#include "message.hpp"
+
+void listenRecv(ClientSocket socket) {
+  while (true) {
+    try {
+      auto forward = ContentMessage::readFrom(socket, Message::FORWARD);
+      std::cout << forward.getUsername() << ": " << forward.getContent()
+                << std::endl;
+      socket.sendData(
+          ControlMessage{Message::RECEIVED, forward.getUsername()}.str());
+    } catch (const ErrorMessage &e) {
+      socket.sendData(e.str());
+    }
+  }
+}
+
+void listenSend(ClientSocket socket, std::string username) {
+  std::string line;
+  while (std::getline(std::cin, line)) {
+    std::istringstream ss{line};
+    char at;
+    ss >> at;
+    if (at != '@') {
+      std::cerr << "Expected @ symbol initially. Retry!\n";
+      continue;
+    }
+    std::string toUser;
+    ss >> toUser;
+    ss.ignore(1);
+    std::string content;
+    std::getline(ss, content);
+
+    socket.sendData(ContentMessage{Message::SEND, toUser, content}.str());
+    try {
+      try {
+        auto res = ControlMessage::readFrom(socket, Message::SENT);
+      } catch (const MessageTypeMismatch &m) {
+        throw ErrorMessage::readFrom(socket);
+      }
+      std::cout << "Delivered successfully!" << std::endl;
+    } catch (const ErrorMessage &e) {
+      std::cerr << "Received error from server: " << e.getErrorStr()
+                << std::endl;
+    }
+  }
+}
+
+std::pair<std::string, std::string> getUsernameServer() {
+  std::cout << "Enter Username: ";
+  std::string username;
+  std::cin >> username;
+  std::string serverIP;
+  std::cout << "Enter chat server address: ";
+  std::cin >> serverIP;
+  std::cin.ignore(1000, '\n');
+  return {username, serverIP};
+}
 
 int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    std::cout << argv[0] << " Version " << ChatApp_VERSION_MAJOR << "."
-              << ChatApp_VERSION_MINOR << std::endl;
+  while (true) {
+    auto [username, serverIP] = getUsernameServer();
+    try {
+      ClientSocket sendSocket{serverIP}, recvSocket{serverIP};
+      sendSocket.sendData(
+          ControlMessage{Message::REGISTER, username, "TOSEND"}.str());
+
+      try {
+        ControlMessage::readFrom(sendSocket, Message::REGISTERED);
+      } catch (const MessageTypeMismatch &m) {
+        throw ErrorMessage::readFrom(sendSocket);
+      }
+      std::cout << "Registered to send messages!" << std::endl;
+
+      recvSocket.sendData(
+          ControlMessage{Message::REGISTER, username, "TORECV"}.str());
+      try {
+        ControlMessage::readFrom(recvSocket, Message::REGISTERED);
+      } catch (const MessageTypeMismatch &m) {
+        throw ErrorMessage::readFrom(recvSocket);
+      }
+      std::cout << "Registered to receive messages!" << std::endl;
+
+      std::thread recvThread{listenRecv, std::move(recvSocket)};
+      listenSend(std::move(sendSocket), username);
+    } catch (const std::runtime_error &e) {
+      std::cerr << "Encountered error: " << e.what() << std::endl;
+      std::cout << "Try again" << std::endl;
+      continue;
+    } catch (const MessageTypeMismatch &m) {
+      std::cerr << "Found incorrect response from server" << std::endl;
+      continue;
+    } catch (const ErrorMessage &e) {
+      std::cerr << "Server sent error: " << e.getErrorStr() << std::endl;
+      continue;
+    }
   }
 }
