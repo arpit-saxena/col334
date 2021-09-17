@@ -12,6 +12,10 @@ void listenRecv(ClientSocket socket) {
   while (true) {
     try {
       socket.recvSome(READ_SIZE);
+      if (!socket()) {
+        std::cerr << "Receive socket closed! Exiting receive thread\n";
+        return;
+      }
       auto forward = ContentMessage::readFrom(socket, Message::FORWARD);
       std::cout << forward.getUsername() << ": " << forward.getContent()
                 << std::endl;
@@ -26,6 +30,11 @@ void listenRecv(ClientSocket socket) {
 void listenSend(ClientSocket socket, std::string username) {
   std::string line;
   while (std::getline(std::cin, line)) {
+    if (!socket()) {
+      std::cerr << "Send socket closed! Exiting send thread\n";
+      return;
+    }
+
     std::istringstream ss{line};
     char at;
     ss >> at;
@@ -51,6 +60,9 @@ void listenSend(ClientSocket socket, std::string username) {
     } catch (const ErrorMessage &e) {
       std::cerr << "Received error from server: " << e.getErrorStr()
                 << std::endl;
+    } catch (...) {
+      std::cerr << "Send socket closed! Exiting send thread\n";
+      return;
     }
   }
 }
@@ -95,6 +107,8 @@ int main(int argc, char *argv[]) {
 
       std::thread recvThread{listenRecv, std::move(recvSocket)};
       listenSend(std::move(sendSocket), username);
+      recvThread.join();
+      break;
     } catch (const std::runtime_error &e) {
       std::cerr << "Encountered error: " << e.what() << std::endl;
       std::cout << "Try again" << std::endl;
