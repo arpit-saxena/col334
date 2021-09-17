@@ -58,6 +58,9 @@ ControlMessage ControlMessage::readFrom(ClientSocket &socket, Type type) {
 
   const auto [username, found] = socket.recvUntil("\n\n");
   if (!found) throw ErrorMessage(ErrorMessage::HEADER_INCOMPLETE);
+  if (username.size() == 0) {
+    throw ErrorMessage{ErrorMessage::MALFORMED_USERNAME};
+  }
   for (auto c : username) {
     if (!isalnum(c)) throw ErrorMessage(ErrorMessage::MALFORMED_USERNAME);
   }
