@@ -115,17 +115,20 @@ void receiveMessages(ClientSocket socket, std::string username) {
             receiverSocket.close();
           }
           throw ErrorMessage{ErrorMessage::UNABLE_SEND};
+        } catch (const MessageTypeMismatch &m) {
+          receiverSocket.close();
+          throw ErrorMessage{ErrorMessage::UNABLE_SEND};
         }
       } catch (const UserMap::UserNotFound &) {
         throw ErrorMessage{ErrorMessage::UNABLE_SEND};
       }
-    } catch (ErrorMessage error) {
+    } catch (const ErrorMessage &error) {
       socket.sendData(error.str());
       if (error.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) {
         userMap.removeUser(username);
         return;
       }
-    } catch (MessageTypeMismatch m) {
+    } catch (const MessageTypeMismatch &m) {
       socket.sendData(ErrorMessage{ErrorMessage::HEADER_INCOMPLETE}.str());
       userMap.removeUser(username);
       return;
