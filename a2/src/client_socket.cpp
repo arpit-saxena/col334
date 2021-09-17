@@ -3,10 +3,30 @@
 #include <cctype>
 #include <stdexcept>
 
+void ClientSocket::close() {
+  if (status == CLOSED) return;
+
+  // https://stackoverflow.com/a/8873013/5585431
+  shutdown(socketDesc, SHUT_RDWR);
+  char buffer[100];
+  while (read(socketDesc, buffer, 100) > 0) {
+  }
+  ::close(socketDesc);
+
+  for (auto func : cleanupFunctions) {
+    try {
+      func(*this);
+    } catch (...) {
+    }
+  }
+
+  status = CLOSED;
+}
+
 void ClientSocket::sendData(const std::string data) {
   if (send(socketDesc, data.c_str(), data.length(), MSG_NOSIGNAL) == -1) {
     if (errno == EPIPE) {
-      status = CLOSED;
+      close();
       return;
     }
     throw std::runtime_error("Socket data send: " +

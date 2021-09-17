@@ -6,9 +6,11 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "config.hpp"
 
@@ -18,6 +20,7 @@ class ClientSocket {
 
  private:
   std::string buffer;
+  std::vector<std::function<void(ClientSocket &)>> cleanupFunctions;
 
  protected:
   int socketDesc;
@@ -47,28 +50,32 @@ class ClientSocket {
     }
   }
 
-  ~ClientSocket() {
-    // https://stackoverflow.com/a/8873013/5585431
-    shutdown(socketDesc, SHUT_RDWR);
-    char buffer[100];
-    while (read(socketDesc, buffer, 100) > 0) {
-    }
-    close(socketDesc);
-  }
+  void addCleanupFunction(std::function<void(ClientSocket &)> func) {
+    cleanupFunctions.push_back(func);
+  };
+
+  void close();
+
+  ~ClientSocket() { close(); }
 
   ClientSocket(const ClientSocket &) = delete;
   ClientSocket(ClientSocket &&other) noexcept
-      : socketDesc(other.socketDesc), status(other.status) {
+      : socketDesc(std::move(other.socketDesc)),
+        status(std::move(other.status)),
+        cleanupFunctions(std::move(other.cleanupFunctions)) {
     other.socketDesc = -1;
     other.status = CLOSED;
   }
+
   ClientSocket &operator=(const ClientSocket &) = delete;
   ClientSocket &operator=(ClientSocket &&other) noexcept {
-    close(socketDesc);
+    close();
     socketDesc = other.socketDesc;
     status = other.status;
+    cleanupFunctions = other.cleanupFunctions;
     other.socketDesc = -1;
     other.status = CLOSED;
+    other.cleanupFunctions.clear();
     return *this;
   }
 

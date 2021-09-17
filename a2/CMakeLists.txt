@@ -4,7 +4,7 @@ project(
     ChatApp
     VERSION 0.1
     DESCRIPTION "A chat application that allows users to exchange plain text messages with each other"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 17)
