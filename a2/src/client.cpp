@@ -60,6 +60,7 @@ void listenSend(ClientSocket socket, std::string username) {
     } catch (const ErrorMessage &e) {
       std::cerr << "Received error from server: " << e.getErrorStr()
                 << std::endl;
+      if (e.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) return;
     } catch (...) {
       std::cerr << "Send socket closed! Exiting send thread\n";
       return;

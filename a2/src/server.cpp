@@ -58,9 +58,6 @@ void forwardMessage(ClientSocket &receiverSocket, ContentMessage message) {
   try {
     receiverSocket.recvSome(READ_SIZE);
     auto reply = ControlMessage::readFrom(receiverSocket, Message::RECEIVED);
-    if (reply.getUsername() != message.getUsername()) {
-      throw ErrorMessage{ErrorMessage::HEADER_INCOMPLETE};
-    }
   } catch (MessageTypeMismatch m) {
     auto error = ErrorMessage::readFrom(receiverSocket);
     throw error;
@@ -75,7 +72,6 @@ void forwardAll(ContentMessage message, std::string fromUser) {
         try {
           forwardMessage(receiverSocket, message);
         } catch (const ErrorMessage &e) {
-          receiverSocket.sendData(e.str());
           if (e.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) {
             receiverSocket.close();
           }
@@ -115,7 +111,6 @@ void receiveMessages(ClientSocket socket, std::string username) {
           socket.sendData(
               ControlMessage{Message::SENT, message.getUsername()}.str());
         } catch (const ErrorMessage &e) {
-          receiverSocket.sendData(e.str());
           if (e.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) {
             receiverSocket.close();
           }
@@ -127,10 +122,12 @@ void receiveMessages(ClientSocket socket, std::string username) {
     } catch (ErrorMessage error) {
       socket.sendData(error.str());
       if (error.getErrorType() == ErrorMessage::HEADER_INCOMPLETE) {
+        userMap.removeUser(username);
         return;
       }
     } catch (MessageTypeMismatch m) {
       socket.sendData(ErrorMessage{ErrorMessage::HEADER_INCOMPLETE}.str());
+      userMap.removeUser(username);
       return;
     }
   }
