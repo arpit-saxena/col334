@@ -10,6 +10,8 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("COL334A3First");
 
+const std::string outDir = "tracesFirst/";
+
 // Taken from examples/tutorial/sixth.cc
 class MyApp : public Application {
  public:
@@ -114,6 +116,10 @@ static void CwndChange(Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd,
                        << std::endl;
 }
 
+static void RxDrop(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p) {
+  *stream->GetStream() << Simulator::Now().GetSeconds() << std::endl;
+}
+
 void run(std::string protocolName) {
   const std::string protocolClass = "ns3::Tcp" + protocolName;
 
@@ -163,9 +169,14 @@ void run(std::string protocolName) {
 
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> stream =
-      asciiTraceHelper.CreateFileStream(protocolName + ".cwnd");
+      asciiTraceHelper.CreateFileStream(outDir + protocolName + ".cwnd");
   ns3TcpSocket->TraceConnectWithoutContext(
       "CongestionWindow", MakeBoundCallback(&CwndChange, stream));
+
+  Ptr<OutputStreamWrapper> dropStream =
+      asciiTraceHelper.CreateFileStream(outDir + protocolName + ".drops");
+  devices.Get(1)->TraceConnectWithoutContext(
+      "PhyRxDrop", MakeBoundCallback(&RxDrop, dropStream));
 
   Simulator::Run();
   Simulator::Destroy();
