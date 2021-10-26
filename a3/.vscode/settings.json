@@ -82,5 +82,13 @@
         "variant": "cpp"
     },
     "python.pythonPath": "/home/arpit/codes/col334/a3/venv/bin/python",
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "emeraldwalk.runonsave": {
+        "commands": [
+        {
+            "match": "Report.md",
+            "isAsync": true,
+            "cmd": "pandoc ${fileBasename} -o ${fileBasenameNoExt}.pdf"
+        }]
+    }
 }
