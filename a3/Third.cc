@@ -26,7 +26,7 @@ class MyApp : public Application {
   static TypeId GetTypeId(void);
   void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
              DataRate dataRate, int connNum,
-             std::unordered_map<uint64_t, int> &ipConnNumMap);
+             std::unordered_map<uint64_t, int> *ipConnNumMap);
 
  private:
   virtual void StartApplication(void);
@@ -69,12 +69,13 @@ TypeId MyApp::GetTypeId(void) {
 
 void MyApp::Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
                   DataRate dataRate, int connNum,
-                  std::unordered_map<uint64_t, int> &ipConnNumMap) {
+                  std::unordered_map<uint64_t, int> *ipConnNumMap) {
   m_socket = socket;
   m_peer = address;
   m_packetSize = packetSize;
   m_dataRate = dataRate;
-  m_ipConnNumMap = &ipConnNumMap;
+  m_ipConnNumMap = ipConnNumMap;
+  m_connNum = connNum;
 }
 
 void MyApp::StartApplication(void) {
@@ -127,8 +128,8 @@ static void CwndChange(Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd,
                        << std::endl;
 }
 
-static void RxDrop(Ptr<OutputStreamWrapper> stream,
-                   std::unordered_map<uint64_t, int> &drops,
+static void RxDrop(std::vector<Ptr<OutputStreamWrapper>> streams,
+                   std::unordered_map<uint64_t, int> *ipToConnNum,
                    Ptr<Packet const> pConst) {
   Ptr<Packet> p = pConst->Copy();
   PppHeader pppHeader;
@@ -142,7 +143,7 @@ static void RxDrop(Ptr<OutputStreamWrapper> stream,
   ipAddr <<= 16;
   ipAddr += tcpHeader.GetSourcePort();
 
-  drops[ipAddr]++;
+  auto stream = streams[(*ipToConnNum)[ipAddr] - 1];
   *stream->GetStream() << Simulator::Now().GetSeconds() << std::endl;
 }
 
@@ -233,14 +234,14 @@ void run(int caseNum) {
 
   Ptr<MyApp> app1 = CreateObject<MyApp>();
   app1->Setup(sock1, sinkAddressConn12, 3000, DataRate("1.5Mbps"), 1,
-              ipConnNumMap);
+              &ipConnNumMap);
   nodes.Get(0)->AddApplication(app1);
   app1->SetStartTime(Seconds(1.));
   app1->SetStopTime(Seconds(20.));
 
   Ptr<MyApp> app2 = CreateObject<MyApp>();
   app2->Setup(sock2, sinkAddressConn12, 3000, DataRate("1.5Mbps"), 2,
-              ipConnNumMap);
+              &ipConnNumMap);
   nodes.Get(0)->AddApplication(app2);
   app2->SetStartTime(Seconds(5.));
   app2->SetStopTime(Seconds(25.));
@@ -250,30 +251,27 @@ void run(int caseNum) {
 
   Ptr<MyApp> app3 = CreateObject<MyApp>();
   app3->Setup(sock3, sinkAddressConn3, 3000, DataRate("1.5Mbps"), 3,
-              ipConnNumMap);
+              &ipConnNumMap);
   nodes.Get(1)->AddApplication(app3);
   app3->SetStartTime(Seconds(15.));
   app3->SetStopTime(Seconds(30.));
 
   AsciiTraceHelper asciiTraceHelper;
-  std::vector<Ptr<OutputStreamWrapper>> cwndStreams;
+  std::vector<Ptr<OutputStreamWrapper>> dropStreams;
   for (size_t i = 0; i < sockets.size(); i++) {
     std::stringstream ss;
-    ss << outDir << "conn-" << i + 1 << "-case-" << caseNum << ".cwnd";
-    cwndStreams.push_back(asciiTraceHelper.CreateFileStream(ss.str()));
+    ss << outDir << "case-" << caseNum << "-conn-" << i + 1;
+    auto cwndStream = asciiTraceHelper.CreateFileStream(ss.str() + ".cwnd");
+    dropStreams.push_back(
+        asciiTraceHelper.CreateFileStream(ss.str() + ".drops"));
     sockets[i]->TraceConnectWithoutContext(
-        "CongestionWindow", MakeBoundCallback(&CwndChange, cwndStreams.back()));
+        "CongestionWindow", MakeBoundCallback(&CwndChange, cwndStream));
   }
 
-  std::unordered_map<uint64_t, int> srcIpToDrops;
-  std::stringstream ss;
-  ss << outDir << "case-" << caseNum << ".drops";
-  Ptr<OutputStreamWrapper> dropStream =
-      asciiTraceHelper.CreateFileStream(ss.str());
   devices23.Get(1)->TraceConnectWithoutContext(
-      "PhyRxDrop", MakeBoundCallback(&RxDrop, dropStream, srcIpToDrops));
+      "PhyRxDrop", MakeBoundCallback(&RxDrop, dropStreams, &ipConnNumMap));
   devices13.Get(1)->TraceConnectWithoutContext(
-      "PhyRxDrop", MakeBoundCallback(&RxDrop, dropStream, srcIpToDrops));
+      "PhyRxDrop", MakeBoundCallback(&RxDrop, dropStreams, &ipConnNumMap));
 
   Simulator::Run();
   Simulator::Destroy();

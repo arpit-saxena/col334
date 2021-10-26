@@ -36,7 +36,7 @@ void TcpNewRenoCSE::CongestionAvoidance(Ptr<TcpSocketState> tcb,
   NS_LOG_FUNCTION(this << tcb << segmentsAcked);
 
   if (segmentsAcked > 0) {
-    tcb->m_cWnd += static_cast<uint32_t>(0.5 * tcb->m_cWnd);
+    tcb->m_cWnd += static_cast<uint32_t>(0.5 * tcb->m_segmentSize);
     NS_LOG_INFO("In CongAvoid, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                  << tcb->m_ssThresh);
   }
