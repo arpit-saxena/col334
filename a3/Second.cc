@@ -23,6 +23,7 @@ class MyApp : public Application {
   static TypeId GetTypeId(void);
   void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
              DataRate dataRate);
+  uint32_t GetNumPacketsSent() { return m_numPacketsSent; };
 
  private:
   virtual void StartApplication(void);
@@ -37,6 +38,7 @@ class MyApp : public Application {
   DataRate m_dataRate;
   EventId m_sendEvent;
   bool m_running;
+  uint32_t m_numPacketsSent;
 };
 
 MyApp::MyApp()
@@ -45,7 +47,8 @@ MyApp::MyApp()
       m_packetSize(0),
       m_dataRate(0),
       m_sendEvent(),
-      m_running(false) {}
+      m_running(false),
+      m_numPacketsSent(0) {}
 
 MyApp::~MyApp() { m_socket = 0; }
 
@@ -88,6 +91,7 @@ void MyApp::StopApplication(void) {
 void MyApp::SendPacket(void) {
   Ptr<Packet> packet = Create<Packet>(m_packetSize);
   m_socket->Send(packet);
+  m_numPacketsSent++;
 
   ScheduleTx();
 }
@@ -173,19 +177,27 @@ void run(std::string channelDataRate, std::string appDataRate,
 
   Simulator::Run();
   Simulator::Destroy();
+
+  std::cout << "Total packets sent for " << name << ": "
+            << app->GetNumPacketsSent() << '\n';
 }
 
 int main(int argc, char *argv[]) {
   CommandLine cmd;
   cmd.Parse(argc, argv);
 
+  std::cout << "Part a:\n";
   auto channelRates = {"2Mbps", "4Mbps", "10Mbps", "20Mbps", "50Mbps"};
   for (auto chRate : channelRates) {
+    std::cout << "\t";
     run(chRate, "2Mbps", "tracesSecond/a/");
   }
+  std::cout << '\n';
 
+  std::cout << "Part b:\n";
   auto appRates = {"0.5Mbps", "1Mbps", "2Mbps", "4Mbps", "10Mbps"};
   for (auto apRate : appRates) {
+    std::cout << "\t";
     run("6Mbps", apRate, "tracesSecond/b/");
   }
 

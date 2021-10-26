@@ -25,6 +25,7 @@ class MyApp : public Application {
   static TypeId GetTypeId(void);
   void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
              DataRate dataRate);
+  uint32_t GetNumPacketsSent() { return m_numPacketsSent; };
 
  private:
   virtual void StartApplication(void);
@@ -39,6 +40,7 @@ class MyApp : public Application {
   DataRate m_dataRate;
   EventId m_sendEvent;
   bool m_running;
+  uint32_t m_numPacketsSent;
 };
 
 MyApp::MyApp()
@@ -47,7 +49,8 @@ MyApp::MyApp()
       m_packetSize(0),
       m_dataRate(0),
       m_sendEvent(),
-      m_running(false) {}
+      m_running(false),
+      m_numPacketsSent(0) {}
 
 MyApp::~MyApp() { m_socket = 0; }
 
@@ -90,6 +93,7 @@ void MyApp::StopApplication(void) {
 void MyApp::SendPacket(void) {
   Ptr<Packet> packet = Create<Packet>(m_packetSize);
   m_socket->Send(packet);
+  m_numPacketsSent++;
 
   ScheduleTx();
 }
@@ -172,6 +176,9 @@ void run(std::string protocolName) {
 
   Simulator::Run();
   Simulator::Destroy();
+
+  std::cout << "Number of packets sent with " << protocolName << ": "
+            << app->GetNumPacketsSent() << '\n';
 }
 
 int main(int argc, char *argv[]) {
