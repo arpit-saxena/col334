@@ -24,7 +24,7 @@ class MyApp : public Application {
    */
   static TypeId GetTypeId(void);
   void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
-             uint32_t nPackets, DataRate dataRate);
+             DataRate dataRate);
 
  private:
   virtual void StartApplication(void);
@@ -36,22 +36,18 @@ class MyApp : public Application {
   Ptr<Socket> m_socket;
   Address m_peer;
   uint32_t m_packetSize;
-  uint32_t m_nPackets;
   DataRate m_dataRate;
   EventId m_sendEvent;
   bool m_running;
-  uint32_t m_packetsSent;
 };
 
 MyApp::MyApp()
     : m_socket(0),
       m_peer(),
       m_packetSize(0),
-      m_nPackets(0),
       m_dataRate(0),
       m_sendEvent(),
-      m_running(false),
-      m_packetsSent(0) {}
+      m_running(false) {}
 
 MyApp::~MyApp() { m_socket = 0; }
 
@@ -65,17 +61,15 @@ TypeId MyApp::GetTypeId(void) {
 }
 
 void MyApp::Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
-                  uint32_t nPackets, DataRate dataRate) {
+                  DataRate dataRate) {
   m_socket = socket;
   m_peer = address;
   m_packetSize = packetSize;
-  m_nPackets = nPackets;
   m_dataRate = dataRate;
 }
 
 void MyApp::StartApplication(void) {
   m_running = true;
-  m_packetsSent = 0;
   m_socket->Bind();
   m_socket->Connect(m_peer);
   SendPacket();
@@ -97,9 +91,7 @@ void MyApp::SendPacket(void) {
   Ptr<Packet> packet = Create<Packet>(m_packetSize);
   m_socket->Send(packet);
 
-  if (++m_packetsSent < m_nPackets) {
-    ScheduleTx();
-  }
+  ScheduleTx();
 }
 
 void MyApp::ScheduleTx(void) {
@@ -162,7 +154,7 @@ void run(std::string protocolName) {
       Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
 
   Ptr<MyApp> app = CreateObject<MyApp>();
-  app->Setup(ns3TcpSocket, sinkAddress, 3000, 10000, DataRate("1Mbps"));
+  app->Setup(ns3TcpSocket, sinkAddress, 3000, DataRate("1Mbps"));
   nodes.Get(0)->AddApplication(app);
   app->SetStartTime(Seconds(1.));
   app->SetStopTime(Seconds(30.));
