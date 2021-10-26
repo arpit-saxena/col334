@@ -192,6 +192,7 @@ void run(int caseNum) {
 
   Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
   em->SetAttribute("ErrorRate", DoubleValue(0.00001));
+
   NetDeviceContainer devices13 =
       pointToPoint.Install(nodes.Get(0), nodes.Get(2));
   devices13.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
@@ -199,8 +200,6 @@ void run(int caseNum) {
   pointToPoint.SetDeviceAttribute("DataRate", StringValue("9Mbps"));
   pointToPoint.SetChannelAttribute("Delay", StringValue("3ms"));
 
-  em = CreateObject<RateErrorModel>();
-  em->SetAttribute("ErrorRate", DoubleValue(0.00001));
   NetDeviceContainer devices23 =
       pointToPoint.Install(nodes.Get(1), nodes.Get(2));
   devices23.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
